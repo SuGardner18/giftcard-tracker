@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.views import APIView, Response
 
 from .models import GiftCard
-from .serializers import GiftCardSerializer
+from .serializers import GiftCardSerializer, GiftCardDetailSerializer
 
 # Create your views here.
 
@@ -38,3 +38,45 @@ class AllCards(APIView):
         new_card.save()
         serializer = GiftCardSerializer(new_card)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class SelectedCard(APIView):
+
+    def get(self, request, id):
+        try:
+            # look the card up through the user, so you can only reach your own cards
+            card = request.user.cards.get(id=id)
+        except GiftCard.DoesNotExist:
+            return Response({"error": "Card not found"}, status=status.HTTP_404_NOT_FOUND)
+        serializer = GiftCardDetailSerializer(card)
+        return Response(serializer.data)
+
+    def put(self, request, id):
+        try:
+            card = request.user.cards.get(id=id)
+        except GiftCard.DoesNotExist:
+            return Response({"error": "Card not found"}, status=status.HTTP_404_NOT_FOUND)
+        old_expiration_date = card.expiration_date
+        for field in ('store_name', 'store_domain', 'card_last_four', 'nickname',
+                      'starting_balance', 'expiration_date'):
+            if field in request.data:
+                setattr(card, field, request.data[field])
+        try:
+            card.full_clean()
+        except ValidationError as e:
+            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        # a new expiration date means the reminder email can be sent again
+        if card.expiration_date != old_expiration_date:
+            card.reminder_sent = False
+        card.save()
+        serializer = GiftCardDetailSerializer(card)
+        return Response(serializer.data)
+
+    def delete(self, request, id):
+        try:
+            card = request.user.cards.get(id=id)
+        except GiftCard.DoesNotExist:
+            return Response({"error": "Card not found"}, status=status.HTTP_404_NOT_FOUND)
+        # grab the name before deleting to use in the response message
+        store_name = card.store_name
+        card.delete()
+        return Response(f"{store_name} card was deleted")
