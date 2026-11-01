@@ -143,11 +143,11 @@ class cards_api_test(TestCase):
         self.token = Token.objects.create(user=self.user)
         self.client = APIClient()
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
-        GiftCard.objects.create(
+        self.card = GiftCard.objects.create(
             user=self.user, store_name='Target', card_last_four='1234',
             starting_balance=Decimal('50.00'))
         # this card belongs to someone else and must never show up
-        GiftCard.objects.create(
+        self.other_card = GiftCard.objects.create(
             user=self.other_user, store_name='Amazon', card_last_four='9999',
             starting_balance=Decimal('25.00'))
 
@@ -189,3 +189,56 @@ class cards_api_test(TestCase):
         self.assertTrue('card_last_four' in response_body)
         # nothing was saved
         self.assertEqual(self.user.cards.count(), 1)
+
+    def test_006_get_one_card_with_its_transactions(self):
+        Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.get(reverse('selected_card', args=[self.card.id]))
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response_body['transactions']), 1)
+        self.assertEqual(response_body['current_balance'], '30.00')
+
+    def test_007_cannot_get_someone_elses_card(self):
+        response = self.client.get(reverse('selected_card', args=[self.other_card.id]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_008_update_a_card(self):
+        response = self.client.put(reverse('selected_card', args=[self.card.id]), data={
+            'nickname': 'Birthday card',
+        }, format='json')
+        self.assertEqual(response.status_code, 200)
+        updated_card = GiftCard.objects.get(id=self.card.id)
+        self.assertEqual(updated_card.nickname, 'Birthday card')
+
+    def test_009_bad_update_is_refused_and_not_saved(self):
+        response = self.client.put(reverse('selected_card', args=[self.card.id]), data={
+            'card_last_four': '12',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('card_last_four' in response_body)
+        unchanged_card = GiftCard.objects.get(id=self.card.id)
+        self.assertEqual(unchanged_card.card_last_four, '1234')
+
+    def test_010_new_expiration_date_resets_the_reminder(self):
+        self.card.reminder_sent = True
+        self.card.save()
+        self.client.put(reverse('selected_card', args=[self.card.id]), data={
+            'expiration_date': '2026-12-01',
+        }, format='json')
+        updated_card = GiftCard.objects.get(id=self.card.id)
+        self.assertFalse(updated_card.reminder_sent)
+
+    def test_011_delete_a_card_and_its_transactions(self):
+        Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.delete(reverse('selected_card', args=[self.card.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.user.cards.count(), 0)
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    def test_012_cannot_delete_someone_elses_card(self):
+        response = self.client.delete(reverse('selected_card', args=[self.other_card.id]))
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(GiftCard.objects.filter(id=self.other_card.id).exists())
