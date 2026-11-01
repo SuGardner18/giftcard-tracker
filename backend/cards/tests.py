@@ -1,14 +1,18 @@
+import json
 from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient
 
 from .models import GiftCard, Transaction
 
 # Create your tests here.
-
+#Test cases written with the help of AI
 
 class giftcard_test(TestCase):
 
@@ -130,3 +134,58 @@ class transaction_test(TestCase):
         except ValidationError as e:
             self.assertTrue('starting_balance' in e.message_dict)
 
+class cards_api_test(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.other_user = User.objects.create_user(username='otheruser', password='testpass123')
+        # a token for the first user, sent with every request from this client
+        self.token = Token.objects.create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        GiftCard.objects.create(
+            user=self.user, store_name='Target', card_last_four='1234',
+            starting_balance=Decimal('50.00'))
+        # this card belongs to someone else and must never show up
+        GiftCard.objects.create(
+            user=self.other_user, store_name='Amazon', card_last_four='9999',
+            starting_balance=Decimal('25.00'))
+
+    def test_001_requires_a_token(self):
+        # an empty credentials() call removes the token
+        self.client.credentials()
+        response = self.client.get(reverse('all_cards'))
+        self.assertEqual(response.status_code, 401)
+
+    def test_002_get_only_my_cards(self):
+        response = self.client.get(reverse('all_cards'))
+        response_body = json.loads(response.content)
+        self.assertEqual(len(response_body), 1)
+        self.assertEqual(response_body[0]['store_name'], 'Target')
+
+    def test_003_current_balance_has_two_decimal_places(self):
+        response = self.client.get(reverse('all_cards'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response_body[0]['current_balance'], '50.00')
+
+    def test_004_create_a_card(self):
+        response = self.client.post(reverse('all_cards'), data={
+            'store_name': 'Olive Garden',
+            'card_last_four': '0077',
+            'starting_balance': '30.00',
+        }, format='json')
+        self.assertEqual(response.status_code, 201)
+        # the new card belongs to the logged in user
+        self.assertEqual(self.user.cards.count(), 2)
+
+    def test_005_bad_card_is_refused(self):
+        response = self.client.post(reverse('all_cards'), data={
+            'store_name': 'Olive Garden',
+            'card_last_four': '12',
+            'starting_balance': '30.00',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('card_last_four' in response_body)
+        # nothing was saved
+        self.assertEqual(self.user.cards.count(), 1)
