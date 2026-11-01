@@ -1,6 +1,11 @@
 # cards/serializers.py
 from rest_framework import serializers
-from .models import GiftCard
+from .models import GiftCard, Transaction
+
+class TransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Transaction
+        fields = ('id', 'amount', 'date', 'note', 'entered_by')
 
 
 class GiftCardSerializer(serializers.ModelSerializer):
@@ -10,3 +15,8 @@ class GiftCardSerializer(serializers.ModelSerializer):
         model = GiftCard
         fields = ('id', 'store_name', 'store_domain', 'card_last_four', 'nickname',
                   'starting_balance', 'current_balance', 'expiration_date', 'reminder_sent')
+
+class GiftCardDetailSerializer(GiftCardSerializer):
+    transactions = TransactionSerializer(many=True, read_only=True)
+    class Meta(GiftCardSerializer.Meta):
+        fields = GiftCardSerializer.Meta.fields + ('transactions',)
