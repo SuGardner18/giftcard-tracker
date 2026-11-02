@@ -260,3 +260,80 @@ class cards_api_test(TestCase):
         response_body = json.loads(response.content)
         self.assertEqual(response.status_code, 400)
         self.assertTrue('starting_balance' in response_body)
+
+
+class transactions_api_test(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.other_user = User.objects.create_user(username='otheruser', password='testpass123')
+        self.token = Token.objects.create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.card = GiftCard.objects.create(
+            user=self.user, store_name='Target', card_last_four='1234',
+            starting_balance=Decimal('50.00'))
+        # this card belongs to someone else
+        self.other_card = GiftCard.objects.create(
+            user=self.other_user, store_name='Amazon', card_last_four='9999',
+            starting_balance=Decimal('25.00'))
+
+    def test_001_create_a_transaction(self):
+        response = self.client.post(reverse('all_transactions', args=[self.card.id]), data={
+            'amount': '20.00', 'date': '2026-10-28', 'note': 'Groceries',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response_body['amount'], '20.00')
+        self.assertEqual(response_body['entered_by'], 'manual')
+        self.assertEqual(self.card.transactions.count(), 1)
+        # the balance is calculated from the transactions
+        self.assertEqual(self.card.current_balance(), Decimal('30.00'))
+
+    def test_002_cannot_spend_more_than_the_balance(self):
+        response = self.client.post(reverse('all_transactions', args=[self.card.id]), data={
+            'amount': '100.00', 'date': '2026-10-28',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('amount' in response_body)
+        self.assertEqual(self.card.transactions.count(), 0)
+
+    def test_003_amount_of_zero_is_refused_not_a_crash(self):
+        # this is the case that used to crash with a 500 error
+        response = self.client.post(reverse('all_transactions', args=[self.card.id]), data={
+            'amount': '0', 'date': '2026-10-28',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('amount' in response_body)
+        self.assertEqual(self.card.transactions.count(), 0)
+
+    def test_004_date_is_required(self):
+        response = self.client.post(reverse('all_transactions', args=[self.card.id]), data={
+            'amount': '10.00',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('date' in response_body)
+
+    def test_005_card_that_does_not_exist(self):
+        response = self.client.post(reverse('all_transactions', args=[9999]), data={
+            'amount': '10.00', 'date': '2026-10-28',
+        }, format='json')
+        self.assertEqual(response.status_code, 404)
+
+    def test_006_cannot_add_to_someone_elses_card(self):
+        response = self.client.post(reverse('all_transactions', args=[self.other_card.id]), data={
+            'amount': '10.00', 'date': '2026-10-28',
+        }, format='json')
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(self.other_card.transactions.count(), 0)
+
+    def test_007_requires_a_token(self):
+        # an empty credentials() call removes the token
+        self.client.credentials()
+        response = self.client.post(reverse('all_transactions', args=[self.card.id]), data={
+            'amount': '10.00', 'date': '2026-10-28',
+        }, format='json')
+        self.assertEqual(response.status_code, 401)

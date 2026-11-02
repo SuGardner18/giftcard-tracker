@@ -3,8 +3,8 @@ from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.views import APIView, Response
 
-from .models import GiftCard
-from .serializers import GiftCardSerializer, GiftCardDetailSerializer
+from .models import GiftCard, Transaction
+from .serializers import GiftCardSerializer, GiftCardDetailSerializer, TransactionSerializer
 
 # Create your views here.
 
@@ -80,3 +80,29 @@ class SelectedCard(APIView):
         store_name = card.store_name
         card.delete()
         return Response(f"{store_name} card was deleted")
+
+
+class AllTransactions(APIView):
+
+    def post(self, request, card_id):
+        try:
+            # look the card up through the user, so you can only add to your own cards
+            card = request.user.cards.get(id=card_id)
+        except GiftCard.DoesNotExist:
+            return Response({"error": "Card not found"}, status=status.HTTP_404_NOT_FOUND)
+        # build the transaction without saving it yet
+        new_transaction = Transaction(
+            gift_card=card,
+            amount=request.data.get('amount'),
+            date=request.data.get('date'),
+            note=request.data.get('note', ''),
+            entered_by=request.data.get('entered_by', 'manual'),
+        )
+        try:
+            # validate BEFORE save; this also runs the "can't spend more than the balance" rule
+            new_transaction.full_clean()
+        except ValidationError as e:
+            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        new_transaction.save()
+        serializer = TransactionSerializer(new_transaction)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
