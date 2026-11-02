@@ -106,3 +106,34 @@ class AllTransactions(APIView):
         new_transaction.save()
         serializer = TransactionSerializer(new_transaction)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class SelectedTransaction(APIView):
+
+    def put(self, request, card_id, transaction_id):
+        try:
+            card = request.user.cards.get(id=card_id)
+            # look the transaction up THROUGH the card, so it must belong to it
+            transaction = card.transactions.get(id=transaction_id)
+        except (GiftCard.DoesNotExist, Transaction.DoesNotExist):
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+        # only these fields can be updated; set them first, then validate BEFORE saving
+        for field in ('amount', 'date', 'note'):
+            if field in request.data:
+                setattr(transaction, field, request.data[field])
+        try:
+            transaction.full_clean()
+        except ValidationError as e:
+            return Response(e.message_dict, status=status.HTTP_400_BAD_REQUEST)
+        transaction.save()
+        serializer = TransactionSerializer(transaction)
+        return Response(serializer.data)
+
+    def delete(self, request, card_id, transaction_id):
+        try:
+            card = request.user.cards.get(id=card_id)
+            transaction = card.transactions.get(id=transaction_id)
+        except (GiftCard.DoesNotExist, Transaction.DoesNotExist):
+            return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+        transaction.delete()
+        return Response("Transaction was deleted")

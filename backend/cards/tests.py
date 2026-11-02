@@ -337,3 +337,95 @@ class transactions_api_test(TestCase):
             'amount': '10.00', 'date': '2026-10-28',
         }, format='json')
         self.assertEqual(response.status_code, 401)
+
+    def test_008_update_a_transaction(self):
+        transaction = Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.put(
+            reverse('selected_transaction', args=[self.card.id, transaction.id]),
+            data={'amount': '25.00', 'note': 'Groceries and snacks'}, format='json')
+        self.assertEqual(response.status_code, 200)
+        updated_transaction = Transaction.objects.get(id=transaction.id)
+        self.assertEqual(updated_transaction.amount, Decimal('25.00'))
+        # the card's balance follows the edit
+        self.assertEqual(self.card.current_balance(), Decimal('25.00'))
+
+    def test_009_edit_can_use_the_full_balance(self):
+        # the transaction's own old amount is left out of the check,
+        # so a $20 purchase can be raised to the card's full $50
+        transaction = Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.put(
+            reverse('selected_transaction', args=[self.card.id, transaction.id]),
+            data={'amount': '50.00'}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+    def test_010_edit_over_the_balance_is_refused_and_not_saved(self):
+        transaction = Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.put(
+            reverse('selected_transaction', args=[self.card.id, transaction.id]),
+            data={'amount': '100.00'}, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('amount' in response_body)
+        unchanged_transaction = Transaction.objects.get(id=transaction.id)
+        self.assertEqual(unchanged_transaction.amount, Decimal('20.00'))
+
+    def test_011_edit_to_zero_is_refused_not_a_crash(self):
+        transaction = Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.put(
+            reverse('selected_transaction', args=[self.card.id, transaction.id]),
+            data={'amount': '0'}, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('amount' in response_body)
+
+    def test_012_transaction_must_belong_to_the_card_in_the_address(self):
+        transaction = Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        # a second card of mine; the transaction does not belong to it
+        second_card = GiftCard.objects.create(
+            user=self.user, store_name='Olive Garden', card_last_four='0077',
+            starting_balance=Decimal('30.00'))
+        response = self.client.put(
+            reverse('selected_transaction', args=[second_card.id, transaction.id]),
+            data={'amount': '10.00'}, format='json')
+        self.assertEqual(response.status_code, 404)
+        unchanged_transaction = Transaction.objects.get(id=transaction.id)
+        self.assertEqual(unchanged_transaction.amount, Decimal('20.00'))
+
+    def test_013_cannot_edit_a_transaction_on_someone_elses_card(self):
+        other_transaction = Transaction.objects.create(
+            gift_card=self.other_card, amount=Decimal('5.00'), date=date(2026, 10, 28))
+        response = self.client.put(
+            reverse('selected_transaction', args=[self.other_card.id, other_transaction.id]),
+            data={'amount': '10.00'}, format='json')
+        self.assertEqual(response.status_code, 404)
+        unchanged_transaction = Transaction.objects.get(id=other_transaction.id)
+        self.assertEqual(unchanged_transaction.amount, Decimal('5.00'))
+
+
+    def test_014_delete_a_transaction(self):
+        transaction = Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('20.00'), date=date(2026, 10, 28))
+        response = self.client.delete(
+            reverse('selected_transaction', args=[self.card.id, transaction.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.card.transactions.count(), 0)
+        # the balance goes back up, since it is calculated from the transactions
+        self.assertEqual(self.card.current_balance(), Decimal('50.00'))
+
+    def test_015_delete_a_transaction_that_does_not_exist(self):
+        response = self.client.delete(
+            reverse('selected_transaction', args=[self.card.id, 9999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_016_cannot_delete_a_transaction_on_someone_elses_card(self):
+        other_transaction = Transaction.objects.create(
+            gift_card=self.other_card, amount=Decimal('5.00'), date=date(2026, 10, 28))
+        response = self.client.delete(
+            reverse('selected_transaction', args=[self.other_card.id, other_transaction.id]))
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Transaction.objects.filter(id=other_transaction.id).exists())
