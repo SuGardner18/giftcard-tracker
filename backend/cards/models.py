@@ -27,7 +27,7 @@ class GiftCard(models.Model):
 
     def clean(self):
         # starting balance can't be edited below what was already spent
-        if self.pk and self.starting_balance is not None and self.starting_balance < self.total_spent():
+        if self.pk and isinstance(self.starting_balance, Decimal) and self.starting_balance < self.total_spent():
             raise ValidationError({'starting_balance': "Can't be less than the amount already spent."})
 
     def __str__(self):
@@ -49,7 +49,8 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-        if self.gift_card_id and self.amount is not None:
+        # a purchase can't exceed the available balance; on edit, leave out its own old amount
+        if self.gift_card_id and isinstance(self.amount, Decimal):
             # add up every OTHER purchase on this card (leave out this one's old amount)
             others = sum(t.amount for t in self.gift_card.transactions.all() if t.pk != self.pk)
             available = self.gift_card.starting_balance - others
