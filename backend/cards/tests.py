@@ -134,6 +134,16 @@ class transaction_test(TestCase):
         except ValidationError as e:
             self.assertTrue('starting_balance' in e.message_dict)
 
+    def test_07_amount_sent_as_text_zero_fails_cleanly(self):
+        # amounts arrive as text from the API; this used to crash with a TypeError
+        new_transaction = Transaction(
+            gift_card=self.card, amount='0', date=date(2026, 10, 28))
+        try:
+            new_transaction.full_clean()
+            self.fail()
+        except ValidationError as e:
+            self.assertTrue('amount' in e.message_dict)
+
 class cards_api_test(TestCase):
 
     def setUp(self):
@@ -242,3 +252,11 @@ class cards_api_test(TestCase):
         response = self.client.delete(reverse('selected_card', args=[self.other_card.id]))
         self.assertEqual(response.status_code, 404)
         self.assertTrue(GiftCard.objects.filter(id=self.other_card.id).exists())
+
+    def test_013_starting_balance_of_zero_is_refused_not_a_crash(self):
+        response = self.client.put(reverse('selected_card', args=[self.card.id]), data={
+            'starting_balance': '0',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('starting_balance' in response_body)
