@@ -72,6 +72,14 @@ class giftcard_test(TestCase):
             self.fail()
 
 
+    def test_06_starting_balance_cannot_be_negative(self):
+        new_card = self.make_card(starting_balance=Decimal('-5.00'))
+        try:
+            new_card.full_clean()
+            self.fail()
+        except ValidationError as e:
+            self.assertTrue('starting_balance' in e.message_dict)
+
 class transaction_test(TestCase):
 
     def setUp(self):
@@ -429,3 +437,13 @@ class transactions_api_test(TestCase):
             reverse('selected_transaction', args=[self.other_card.id, other_transaction.id]))
         self.assertEqual(response.status_code, 404)
         self.assertTrue(Transaction.objects.filter(id=other_transaction.id).exists())
+
+
+    def test_017_negative_amount_is_refused(self):
+        response = self.client.post(reverse('all_transactions', args=[self.card.id]), data={
+            'amount': '-5.00', 'date': '2026-10-28',
+        }, format='json')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue('amount' in response_body)
+        self.assertEqual(self.card.transactions.count(), 0)
