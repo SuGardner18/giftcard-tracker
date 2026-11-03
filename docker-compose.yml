@@ -16,6 +16,16 @@ services:
       - db
     ports:
       - "8000:8000"
+
+  webserver:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - api
   db:
     image: postgres:16
     environment:
