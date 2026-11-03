@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
 
@@ -49,6 +49,9 @@ export default function Login() {
         <button type="submit">Log In</button>
       </form>
       {error && <p>{error}</p>}
+            <p>
+        Don't have an account? <Link to="/signup">Sign up</Link>
+      </p>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { AuthProvider } from "./contexts/AuthContext"
 import RequireAuth from "./components/RequireAuth"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
+import Signup from "./pages/Signup"
 
 function App() {
   return (
@@ -11,6 +12,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route
             path="/"
             element={
