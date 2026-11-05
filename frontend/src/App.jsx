@@ -5,6 +5,7 @@ import CssBaseline from "@mui/material/CssBaseline"
 import theme from "./theme"
 import { AuthProvider } from "./contexts/AuthContext"
 import RequireAuth from "./components/RequireAuth"
+import AppLayout from "./components/AppLayout"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Dashboard from "./pages/Dashboard"
@@ -19,13 +20,14 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route
-              path="/"
               element={
                 <RequireAuth>
-                  <Dashboard />
+                  <AppLayout />
                 </RequireAuth>
               }
-            />
+            >
+              <Route path="/" element={<Dashboard />} />
+            </Route>
           </Routes>
         </Router>
       </AuthProvider>
