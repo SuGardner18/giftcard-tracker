@@ -26,17 +26,11 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  function handleLogout() {
-    logout()
-    navigate("/login")
-  }
-
   if (loading) return <p>Loading…</p>
 
   return (
     <div>
       <h1>My Gift Cards</h1>
-      <button onClick={handleLogout}>Log Out</button>
       {error && <p>Error: {error}</p>}
       {cards.length === 0 && !error && <p>You haven't added any gift cards yet.</p>}
       <ul>
