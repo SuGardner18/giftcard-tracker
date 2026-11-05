@@ -1,8 +1,13 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import Alert from "@mui/material/Alert"
+import CircularProgress from "@mui/material/CircularProgress"
+import Grid from "@mui/material/Grid"
+import Typography from "@mui/material/Typography"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
+import GiftCardTile from "../components/GiftCardTile"
 
 export default function Dashboard() {
   const [cards, setCards] = useState([])
@@ -26,23 +31,31 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return <p>Loading…</p>
+  if (loading) return <CircularProgress aria-label="Loading your gift cards" />
 
   return (
-    <div>
-      <h1>My Gift Cards</h1>
-      {error && <p>Error: {error}</p>}
-      {cards.length === 0 && !error && <p>You haven't added any gift cards yet.</p>}
-      <ul>
+    <>
+      <Typography variant="h4" component="h1" sx={{ mb: 4 }}>
+        My Gift Cards
+      </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Error: {error}
+        </Alert>
+      )}
+
+      {cards.length === 0 && !error && (
+        <Typography color="text.secondary">You haven't added any gift cards yet.</Typography>
+      )}
+
+      <Grid container spacing={3}>
         {cards.map((card) => (
-          <li key={card.id}>
-            <strong>{card.store_name}</strong> ****{card.card_last_four}
-            <br />
-            Balance: ${card.current_balance}
-            {card.expiration_date && <> | Expires: {card.expiration_date}</>}
-          </li>
+          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
+            <GiftCardTile card={card} />
+          </Grid>
         ))}
-      </ul>
-    </div>
+      </Grid>
+    </>
   )
 }
