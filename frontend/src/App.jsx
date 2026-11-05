@@ -1,29 +1,35 @@
 // src/App.jsx
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
+import { ThemeProvider } from "@mui/material/styles"
+import CssBaseline from "@mui/material/CssBaseline"
+import theme from "./theme"
 import { AuthProvider } from "./contexts/AuthContext"
 import RequireAuth from "./components/RequireAuth"
 import Login from "./pages/Login"
-import Dashboard from "./pages/Dashboard"
 import Signup from "./pages/Signup"
+import Dashboard from "./pages/Dashboard"
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route
-            path="/"
-            element={
-              <RequireAuth>
-                <Dashboard />
-              </RequireAuth>
-            }
-          />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <Dashboard />
+                </RequireAuth>
+              }
+            />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
