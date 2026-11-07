@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard"
 import AddCard from "./pages/AddCard"
 import CardDetail from "./pages/CardDetail"
 import EditCard from "./pages/EditCard"
+import LogPurchase from "./pages/LogPurchase"
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
               <Route path="/cards/new" element={<AddCard />} />
               <Route path="/cards/:id" element={<CardDetail />} />
               <Route path="/cards/:id/edit" element={<EditCard />} />
+              <Route path="/cards/:id/purchases/new" element={<LogPurchase />} />
             </Route>
           </Routes>
         </Router>
