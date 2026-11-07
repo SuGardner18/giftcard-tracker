@@ -21,6 +21,7 @@ import TableRow from "@mui/material/TableRow"
 import Typography from "@mui/material/Typography"
 import ArrowBackIcon from "@mui/icons-material/ArrowBack"
 import DeleteIcon from "@mui/icons-material/Delete"
+import AddIcon from "@mui/icons-material/Add"
 import EditIcon from "@mui/icons-material/Edit"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
@@ -135,6 +136,9 @@ export default function CardDetail() {
           </Stack>
 
           <Stack direction="row" spacing={1.5}>
+            <Button component={RouterLink} to={`/cards/${card.id}/purchases/new`} variant="contained" startIcon={<AddIcon />}>
+              Log Purchase
+            </Button>
             <Button component={RouterLink} to={`/cards/${card.id}/edit`} variant="outlined" startIcon={<EditIcon />}>
               Edit
             </Button>
