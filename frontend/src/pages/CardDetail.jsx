@@ -19,9 +19,9 @@ import TableContainer from "@mui/material/TableContainer"
 import TableHead from "@mui/material/TableHead"
 import TableRow from "@mui/material/TableRow"
 import Typography from "@mui/material/Typography"
+import AddIcon from "@mui/icons-material/Add"
 import ArrowBackIcon from "@mui/icons-material/ArrowBack"
 import DeleteIcon from "@mui/icons-material/Delete"
-import AddIcon from "@mui/icons-material/Add"
 import EditIcon from "@mui/icons-material/Edit"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
@@ -51,7 +51,8 @@ export default function CardDetail() {
   const { logout } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => {
+  // ask the API for this card (it comes with its purchases)
+  function loadCard() {
     api.get(`/api/v1/cards/${id}/`)
       .then((data) => setCard(data))
       .catch((err) => {
@@ -66,6 +67,10 @@ export default function CardDetail() {
         }
       })
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    loadCard()
   }, [id])
 
   async function handleDelete() {
@@ -77,6 +82,16 @@ export default function CardDetail() {
       setDeleteError(err.body?.error ?? err.message)
       setDeleting(false)
       setConfirmOpen(false)
+    }
+  }
+
+  async function handleDeletePurchase(purchaseId) {
+    if (!window.confirm("Delete this purchase? The amount goes back on the card's balance.")) return
+    try {
+      await api.delete(`/api/v1/cards/${id}/transactions/${purchaseId}/`)
+      loadCard()
+    } catch (err) {
+      setDeleteError(err.body?.error ?? err.message)
     }
   }
 
@@ -135,7 +150,7 @@ export default function CardDetail() {
             </div>
           </Stack>
 
-          <Stack direction="row" spacing={1.5}>
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
             <Button component={RouterLink} to={`/cards/${card.id}/purchases/new`} variant="contained" startIcon={<AddIcon />}>
               Log Purchase
             </Button>
@@ -190,6 +205,7 @@ export default function CardDetail() {
                 <TableCell>Note</TableCell>
                 <TableCell>Added by</TableCell>
                 <TableCell align="right">Amount</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -199,6 +215,14 @@ export default function CardDetail() {
                   <TableCell>{t.note || "—"}</TableCell>
                   <TableCell>{t.entered_by === "scan" ? "Scan" : "Typed"}</TableCell>
                   <TableCell align="right">{formatMoney(t.amount)}</TableCell>
+                  <TableCell align="right">
+                    <Button component={RouterLink} to={`/cards/${card.id}/purchases/${t.id}/edit`} size="small">
+                      Edit
+                    </Button>
+                    <Button color="error" size="small" onClick={() => handleDeletePurchase(t.id)}>
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
