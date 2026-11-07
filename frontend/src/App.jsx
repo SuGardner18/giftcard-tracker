@@ -11,6 +11,7 @@ import Signup from "./pages/Signup"
 import Dashboard from "./pages/Dashboard"
 import AddCard from "./pages/AddCard"
 import CardDetail from "./pages/CardDetail"
+import EditCard from "./pages/EditCard"
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/cards/new" element={<AddCard />} />
               <Route path="/cards/:id" element={<CardDetail />} />
+              <Route path="/cards/:id/edit" element={<EditCard />} />
             </Route>
           </Routes>
         </Router>
