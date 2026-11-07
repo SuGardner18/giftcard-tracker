@@ -10,6 +10,7 @@ import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Dashboard from "./pages/Dashboard"
 import AddCard from "./pages/AddCard"
+import CardDetail from "./pages/CardDetail"
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
             >
               <Route path="/" element={<Dashboard />} />
               <Route path="/cards/new" element={<AddCard />} />
+              <Route path="/cards/:id" element={<CardDetail />} />
             </Route>
           </Routes>
         </Router>
