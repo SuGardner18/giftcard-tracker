@@ -32,3 +32,50 @@ export function cardStatus(card) {
   if (Number(card.current_balance) === 0) return "used"
   return ""
 }
+
+// how a card ranks when sorting by "expiring soonest": dated cards by days left,
+// then cards with no expiration, then cards that are expired or used up
+function expiringRank(card) {
+  const status = cardStatus(card)
+  if (status === "expired" || status === "used") return 2000000000
+  if (!card.expiration_date) return 1000000000
+  return daysUntil(card.expiration_date)
+}
+
+// apply the search box, the filter chip, and the sort menu to the list of cards
+// filter is "all", "soon", or "inactive" (used up or expired)
+// sort is "expiring", "balance", or "name"
+export function filterAndSortCards(cards, { search, filter, sort }) {
+  const term = search.trim().toLowerCase()
+
+  const result = cards.filter((card) => {
+    const status = cardStatus(card)
+    if (filter === "soon" && status !== "soon") return false
+    if (filter === "inactive" && status !== "used" && status !== "expired") return false
+    if (term) {
+      const text = `${card.store_name} ${card.nickname ?? ""}`.toLowerCase()
+      if (!text.includes(term)) return false
+    }
+    return true
+  })
+
+  result.sort((a, b) => {
+    if (sort === "balance") return Number(b.current_balance) - Number(a.current_balance)
+    if (sort === "name") return a.store_name.localeCompare(b.store_name)
+    return expiringRank(a) - expiringRank(b) || a.store_name.localeCompare(b.store_name)
+  })
+
+  return result
+}
+
+// the numbers shown on the filter chips
+export function countByFilter(cards) {
+  let soon = 0
+  let inactive = 0
+  cards.forEach((card) => {
+    const status = cardStatus(card)
+    if (status === "soon") soon += 1
+    if (status === "used" || status === "expired") inactive += 1
+  })
+  return { all: cards.length, soon, inactive }
+}

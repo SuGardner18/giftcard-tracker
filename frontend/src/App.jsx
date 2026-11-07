@@ -9,6 +9,7 @@ import AppLayout from "./components/AppLayout"
 import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Dashboard from "./pages/Dashboard"
+import AddCard from "./pages/AddCard"
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
               }
             >
               <Route path="/" element={<Dashboard />} />
+              <Route path="/cards/new" element={<AddCard />} />
             </Route>
           </Routes>
         </Router>
