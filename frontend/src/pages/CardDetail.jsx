@@ -5,6 +5,11 @@ import Alert from "@mui/material/Alert"
 import Avatar from "@mui/material/Avatar"
 import Button from "@mui/material/Button"
 import CircularProgress from "@mui/material/CircularProgress"
+import Dialog from "@mui/material/Dialog"
+import DialogActions from "@mui/material/DialogActions"
+import DialogContent from "@mui/material/DialogContent"
+import DialogContentText from "@mui/material/DialogContentText"
+import DialogTitle from "@mui/material/DialogTitle"
 import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
 import Table from "@mui/material/Table"
@@ -15,6 +20,8 @@ import TableHead from "@mui/material/TableHead"
 import TableRow from "@mui/material/TableRow"
 import Typography from "@mui/material/Typography"
 import ArrowBackIcon from "@mui/icons-material/ArrowBack"
+import DeleteIcon from "@mui/icons-material/Delete"
+import EditIcon from "@mui/icons-material/Edit"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
 import StatusChip from "../components/StatusChip"
@@ -37,6 +44,9 @@ export default function CardDetail() {
   const [card, setCard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -56,6 +66,18 @@ export default function CardDetail() {
       })
       .finally(() => setLoading(false))
   }, [id])
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await api.delete(`/api/v1/cards/${id}/`)
+      navigate("/")
+    } catch (err) {
+      setDeleteError(err.body?.error ?? err.message)
+      setDeleting(false)
+      setConfirmOpen(false)
+    }
+  }
 
   if (loading) return <CircularProgress aria-label="Loading this card" />
 
@@ -84,17 +106,42 @@ export default function CardDetail() {
         Back to Dashboard
       </Button>
 
+      {deleteError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {deleteError}
+        </Alert>
+      )}
+
       <Paper sx={{ p: 4, mb: 4 }}>
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-          <Avatar sx={{ width: 56, height: 56, bgcolor: "#D8F3EE", color: "primary.main", fontWeight: 700 }}>
-            {card.store_name.charAt(0).toUpperCase()}
-          </Avatar>
-          <div>
-            <Typography variant="h4" component="h1">
-              {card.store_name}
-            </Typography>
-            <Typography color="text.secondary">{details}</Typography>
-          </div>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          flexWrap="wrap"
+          useFlexGap
+          spacing={2}
+          sx={{ mb: 3 }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar sx={{ width: 56, height: 56, bgcolor: "#D8F3EE", color: "primary.main", fontWeight: 700 }}>
+              {card.store_name.charAt(0).toUpperCase()}
+            </Avatar>
+            <div>
+              <Typography variant="h4" component="h1">
+                {card.store_name}
+              </Typography>
+              <Typography color="text.secondary">{details}</Typography>
+            </div>
+          </Stack>
+
+          <Stack direction="row" spacing={1.5}>
+            <Button component={RouterLink} to={`/cards/${card.id}/edit`} variant="outlined" startIcon={<EditIcon />}>
+              Edit
+            </Button>
+            <Button color="error" variant="outlined" startIcon={<DeleteIcon />} onClick={() => setConfirmOpen(true)}>
+              Delete
+            </Button>
+          </Stack>
         </Stack>
 
         <Stack direction="row" spacing={6} flexWrap="wrap" useFlexGap>
@@ -154,6 +201,21 @@ export default function CardDetail() {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+        <DialogTitle>Delete {card.store_name}?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This removes the card and all of its purchases. This can't be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button color="error" onClick={handleDelete} disabled={deleting}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   )
 }
