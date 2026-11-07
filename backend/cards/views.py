@@ -1,4 +1,8 @@
 # cards/views.py
+import datetime
+
+import requests
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.views import APIView, Response
@@ -137,3 +141,66 @@ class SelectedTransaction(APIView):
             return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
         transaction.delete()
         return Response("Transaction was deleted")
+
+
+class SendReminders(APIView):
+
+    def post(self, request):
+        if not settings.RESEND_API_KEY:
+            return Response({"error": "Email is not set up on the server."},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        if not request.user.email:
+            return Response({"error": "Your account has no email address."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # find this user's cards that expire within 30 days, still have money, and have no reminder yet
+        today = datetime.date.today()
+        expiring = []
+        for card in request.user.cards.filter(reminder_sent=False):
+            if card.expiration_date and card.current_balance() > 0:
+                days_left = (card.expiration_date - today).days
+                if 0 <= days_left <= 30:
+                    expiring.append(card)
+
+        if len(expiring) == 0:
+            return Response({"sent": 0, "message": "No cards need a reminder right now."})
+
+        lines = []
+        for card in expiring:
+            lines.append(
+                f"- {card.store_name} ****{card.card_last_four}: ${card.current_balance()} left, "
+                f"expires {card.expiration_date.strftime('%m/%d/%Y')}"
+            )
+        body = (
+            f"Hi {request.user.username},\n\n"
+            "These gift cards expire within 30 days:\n\n"
+            + "\n".join(lines)
+            + "\n\nUse them up before they expire!\n\nGFiles"
+        )
+
+        try:
+            # our server calls Resend's server, the same pattern as the PokeAPI lesson
+            response = requests.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},
+                json={
+                    "from": settings.RESEND_FROM,
+                    "to": [request.user.email],
+                    "subject": "Your gift cards are expiring soon",
+                    "text": body,
+                },
+                timeout=30,
+            )
+        except requests.RequestException:
+            return Response({"error": "Could not reach the email service."},
+                            status=status.HTTP_502_BAD_GATEWAY)
+
+        if response.status_code != 200:
+            return Response({"error": f"The email service refused the request: {response.text}"},
+                            status=status.HTTP_502_BAD_GATEWAY)
+
+        # the email went out, so remember it. Each card gets one reminder
+        for card in expiring:
+            card.reminder_sent = True
+            card.save()
+        return Response({"sent": len(expiring), "message": f"Emailed a reminder for {len(expiring)} card(s)."})
