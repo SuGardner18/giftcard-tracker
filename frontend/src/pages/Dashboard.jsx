@@ -1,18 +1,26 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link as RouterLink, useNavigate } from "react-router-dom"
 import Alert from "@mui/material/Alert"
+import Button from "@mui/material/Button"
 import CircularProgress from "@mui/material/CircularProgress"
 import Grid from "@mui/material/Grid"
+import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
+import AddIcon from "@mui/icons-material/Add"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
 import GiftCardTile from "../components/GiftCardTile"
+import DashboardToolbar from "../components/DashboardToolbar"
+import { countByFilter, filterAndSortCards, formatMoney } from "../utilities/cards"
 
 export default function Dashboard() {
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState("all")
+  const [sort, setSort] = useState("expiring")
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -33,11 +41,35 @@ export default function Dashboard() {
 
   if (loading) return <CircularProgress aria-label="Loading your gift cards" />
 
+  const visibleCards = filterAndSortCards(cards, { search, filter, sort })
+  const counts = countByFilter(cards)
+  const totalBalance = cards.reduce((sum, card) => sum + Number(card.current_balance), 0)
+
   return (
     <>
-      <Typography variant="h4" component="h1" sx={{ mb: 4 }}>
-        My Gift Cards
-      </Typography>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        flexWrap="wrap"
+        useFlexGap
+        spacing={2}
+        sx={{ mb: 3 }}
+      >
+        <div>
+          <Typography variant="h4" component="h1">
+            My Gift Cards
+          </Typography>
+          {cards.length > 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {cards.length} {cards.length === 1 ? "card" : "cards"} · {formatMoney(totalBalance)} total balance
+            </Typography>
+          )}
+        </div>
+        <Button component={RouterLink} to="/cards/new" variant="contained" startIcon={<AddIcon />}>
+          Add Card
+        </Button>
+      </Stack>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -49,13 +81,31 @@ export default function Dashboard() {
         <Typography color="text.secondary">You haven't added any gift cards yet.</Typography>
       )}
 
-      <Grid container spacing={3}>
-        {cards.map((card) => (
-          <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
-            <GiftCardTile card={card} />
+      {cards.length > 0 && (
+        <>
+          <DashboardToolbar
+            search={search}
+            onSearchChange={setSearch}
+            filter={filter}
+            onFilterChange={setFilter}
+            sort={sort}
+            onSortChange={setSort}
+            counts={counts}
+          />
+
+          {visibleCards.length === 0 && (
+            <Typography color="text.secondary">No cards match your search.</Typography>
+          )}
+
+          <Grid container spacing={3}>
+            {visibleCards.map((card) => (
+              <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                <GiftCardTile card={card} />
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
+        </>
+      )}
     </>
   )
 }
