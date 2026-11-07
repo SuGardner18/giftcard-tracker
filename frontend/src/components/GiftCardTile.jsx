@@ -1,29 +1,24 @@
 // src/components/GiftCardTile.jsx
-import Card from "@mui/material/Card"
-import CardContent from "@mui/material/CardContent"
+import { Link as RouterLink } from "react-router-dom"
 import Avatar from "@mui/material/Avatar"
-import Chip from "@mui/material/Chip"
+import Button from "@mui/material/Button"
+import Card from "@mui/material/Card"
+import CardActions from "@mui/material/CardActions"
+import CardContent from "@mui/material/CardContent"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
+import StatusChip from "./StatusChip"
 import { cardStatus, formatDate, formatMoney } from "../utilities/cards"
-
-// the label and colors for each status chip
-const STATUS_CHIPS = {
-  soon: { label: "Expiring soon", bg: "#FFE3DD", color: "#8F2A1A" },
-  expired: { label: "Expired", bg: "#ECE8F3", color: "#4A3D6B" },
-  used: { label: "Used up", bg: "#ECE8F3", color: "#4A3D6B" },
-}
 
 export default function GiftCardTile({ card }) {
   const status = cardStatus(card)
-  const chip = STATUS_CHIPS[status]
   const dimmed = status === "used" || status === "expired"
   // "From Mom · ****1234", or just "****1234" when there is no nickname
   const details = [card.nickname, `****${card.card_last_four}`].filter(Boolean).join(" · ")
 
   return (
-    <Card elevation={1} sx={{ height: "100%" }}>
-      <CardContent sx={{ display: "flex", flexDirection: "column", gap: 2.5, p: 3 }}>
+    <Card elevation={1} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2.5, p: 3 }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Avatar sx={{ width: 48, height: 48, bgcolor: "#D8F3EE", color: "primary.main", fontWeight: 700 }}>
             {card.store_name.charAt(0).toUpperCase()}
@@ -56,15 +51,15 @@ export default function GiftCardTile({ card }) {
           <Typography variant="body2" color="text.secondary">
             {card.expiration_date ? `Expires ${formatDate(card.expiration_date)}` : "No expiration"}
           </Typography>
-          {chip && (
-            <Chip
-              size="small"
-              label={chip.label}
-              sx={{ bgcolor: chip.bg, color: chip.color, fontWeight: 700, textTransform: "uppercase" }}
-            />
-          )}
+          <StatusChip status={status} />
         </Stack>
       </CardContent>
+
+      <CardActions sx={{ px: 2, pb: 2 }}>
+        <Button component={RouterLink} to={`/cards/${card.id}`}>
+          View details
+        </Button>
+      </CardActions>
     </Card>
   )
 }
