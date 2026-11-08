@@ -541,3 +541,58 @@ class reminders_api_test(TestCase):
         self.client.credentials()
         response = self.client.post(reverse('send_reminders'))
         self.assertEqual(response.status_code, 401)
+
+
+@override_settings(BRANDFETCH_CLIENT_ID="test-id")
+class brand_search_api_test(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.token = Token.objects.create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.fake_brands = [
+            {"name": "Target", "domain": "target.com", "icon": "https://cdn.example/target.webp", "brandId": "1"},
+            {"name": "Target Global", "domain": "targetglobal.vc", "icon": None, "brandId": "2"},
+            {"name": "No domain", "domain": None, "icon": None, "brandId": "3"},
+        ]
+
+    @patch('cards.views.requests.get')
+    def test_001_returns_the_matches(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = self.fake_brands
+        response = self.client.get(reverse('brand_search') + '?name=target')
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 200)
+        # the brand with no domain is left out
+        self.assertEqual(len(response_body['results']), 2)
+        self.assertEqual(response_body['results'][0]['domain'], 'target.com')
+        self.assertEqual(response_body['results'][0]['name'], 'Target')
+
+    @patch('cards.views.requests.get')
+    def test_002_sends_the_name_and_client_id_to_brandfetch(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = []
+        self.client.get(reverse('brand_search') + '?name=olive garden')
+        self.assertEqual(mock_get.call_count, 1)
+        # the space is made safe for a web address
+        self.assertTrue(mock_get.call_args.args[0].endswith('/olive%20garden'))
+        self.assertEqual(mock_get.call_args.kwargs['params']['c'], 'test-id')
+
+    @patch('cards.views.requests.get')
+    def test_003_a_name_that_is_too_short_does_not_call_brandfetch(self, mock_get):
+        response = self.client.get(reverse('brand_search') + '?name=a')
+        response_body = json.loads(response.content)
+        self.assertEqual(response_body['results'], [])
+        self.assertEqual(mock_get.call_count, 0)
+
+    @patch('cards.views.requests.get')
+    def test_004_a_failed_search_gives_a_clear_error(self, mock_get):
+        mock_get.return_value.status_code = 500
+        response = self.client.get(reverse('brand_search') + '?name=target')
+        self.assertEqual(response.status_code, 502)
+
+    def test_005_requires_a_token(self):
+        self.client.credentials()
+        response = self.client.get(reverse('brand_search') + '?name=target')
+        self.assertEqual(response.status_code, 401)
