@@ -1,10 +1,11 @@
 import json
-from datetime import date
+from datetime import date, timedelta
+from unittest.mock import patch
 from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -447,3 +448,96 @@ class transactions_api_test(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertTrue('amount' in response_body)
         self.assertEqual(self.card.transactions.count(), 0)
+
+
+# a fake key, so these tests never depend on the real one
+@override_settings(RESEND_API_KEY="test-key")
+class reminders_api_test(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser', password='testpass123', email='su@example.com')
+        self.other_user = User.objects.create_user(
+            username='otheruser', password='testpass123', email='other@example.com')
+        self.token = Token.objects.create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+        # a card that expires in 10 days and still has money
+        self.card = GiftCard.objects.create(
+            user=self.user, store_name='Target', card_last_four='1234',
+            starting_balance=Decimal('50.00'),
+            expiration_date=date.today() + timedelta(days=10))
+
+    @patch('cards.views.requests.post')
+    def test_001_sends_a_reminder_and_marks_the_card(self, mock_post):
+        mock_post.return_value.status_code = 200
+        response = self.client.post(reverse('send_reminders'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response_body['sent'], 1)
+        self.assertEqual(mock_post.call_count, 1)
+        # the email goes to the user's own address
+        self.assertEqual(mock_post.call_args.kwargs['json']['to'], ['su@example.com'])
+        self.card.refresh_from_db()
+        self.assertTrue(self.card.reminder_sent)
+
+    @patch('cards.views.requests.post')
+    def test_002_does_not_send_twice(self, mock_post):
+        self.card.reminder_sent = True
+        self.card.save()
+        response = self.client.post(reverse('send_reminders'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response_body['sent'], 0)
+        self.assertEqual(mock_post.call_count, 0)
+
+    @patch('cards.views.requests.post')
+    def test_003_card_not_expiring_soon_is_skipped(self, mock_post):
+        self.card.expiration_date = date.today() + timedelta(days=60)
+        self.card.save()
+        response = self.client.post(reverse('send_reminders'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response_body['sent'], 0)
+        self.assertEqual(mock_post.call_count, 0)
+
+    @patch('cards.views.requests.post')
+    def test_004_card_with_no_money_left_is_skipped(self, mock_post):
+        Transaction.objects.create(
+            gift_card=self.card, amount=Decimal('50.00'), date=date.today())
+        response = self.client.post(reverse('send_reminders'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response_body['sent'], 0)
+        self.assertEqual(mock_post.call_count, 0)
+
+    @patch('cards.views.requests.post')
+    def test_005_a_failed_email_does_not_mark_the_card(self, mock_post):
+        mock_post.return_value.status_code = 403
+        mock_post.return_value.text = 'not allowed'
+        response = self.client.post(reverse('send_reminders'))
+        self.assertEqual(response.status_code, 502)
+        self.card.refresh_from_db()
+        self.assertFalse(self.card.reminder_sent)
+
+    @patch('cards.views.requests.post')
+    def test_006_other_users_cards_are_never_included(self, mock_post):
+        mock_post.return_value.status_code = 200
+        GiftCard.objects.create(
+            user=self.other_user, store_name='Amazon', card_last_four='9999',
+            starting_balance=Decimal('25.00'),
+            expiration_date=date.today() + timedelta(days=5))
+        response = self.client.post(reverse('send_reminders'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response_body['sent'], 1)
+        self.assertNotIn('Amazon', mock_post.call_args.kwargs['json']['text'])
+
+    @patch('cards.views.requests.post')
+    def test_007_user_with_no_email_gets_a_clear_error(self, mock_post):
+        self.user.email = ''
+        self.user.save()
+        response = self.client.post(reverse('send_reminders'))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(mock_post.call_count, 0)
+
+    def test_008_requires_a_token(self):
+        self.client.credentials()
+        response = self.client.post(reverse('send_reminders'))
+        self.assertEqual(response.status_code, 401)

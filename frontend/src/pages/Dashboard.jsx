@@ -8,6 +8,7 @@ import Grid from "@mui/material/Grid"
 import Stack from "@mui/material/Stack"
 import Typography from "@mui/material/Typography"
 import AddIcon from "@mui/icons-material/Add"
+import EmailIcon from "@mui/icons-material/Email"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
 import GiftCardTile from "../components/GiftCardTile"
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
   const [sort, setSort] = useState("expiring")
@@ -38,6 +40,17 @@ export default function Dashboard() {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  // ask the API to email me the cards that expire within 30 days
+  async function handleReminders() {
+    setNotice(null)
+    try {
+      const data = await api.post("/api/v1/cards/reminders/")
+      setNotice({ severity: "success", text: data.message })
+    } catch (err) {
+      setNotice({ severity: "error", text: err.body?.error ?? err.message })
+    }
+  }
 
   if (loading) return <CircularProgress aria-label="Loading your gift cards" />
 
@@ -66,10 +79,21 @@ export default function Dashboard() {
             </Typography>
           )}
         </div>
-        <Button component={RouterLink} to="/cards/new" variant="contained" startIcon={<AddIcon />}>
-          Add Card
-        </Button>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+          <Button variant="outlined" startIcon={<EmailIcon />} onClick={handleReminders}>
+            Email me expiring cards
+          </Button>
+          <Button component={RouterLink} to="/cards/new" variant="contained" startIcon={<AddIcon />}>
+            Add Card
+          </Button>
+        </Stack>
       </Stack>
+
+      {notice && (
+        <Alert severity={notice.severity} sx={{ mb: 3 }} onClose={() => setNotice(null)}>
+          {notice.text}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
