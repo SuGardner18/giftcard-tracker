@@ -596,3 +596,41 @@ class brand_search_api_test(TestCase):
         self.client.credentials()
         response = self.client.get(reverse('brand_search') + '?name=target')
         self.assertEqual(response.status_code, 401)
+
+
+@override_settings(BRANDFETCH_CLIENT_ID="test-id")
+class logo_url_test(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.token = Token.objects.create(user=self.user)
+        self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.token.key)
+
+    def make_card(self, **kwargs):
+        values = dict(user=self.user, store_name='Target', card_last_four='1234',
+                      starting_balance=Decimal('10.00'))
+        values.update(kwargs)
+        return GiftCard.objects.create(**values)
+
+    def test_001_logo_url_uses_the_domain_and_client_id(self):
+        card = self.make_card(store_domain='target.com')
+        self.assertEqual(
+            card.logo_url(),
+            'https://cdn.brandfetch.io/target.com/w/128/h/128/icon.png?c=test-id')
+
+    def test_002_no_domain_means_no_logo(self):
+        card = self.make_card()
+        self.assertIsNone(card.logo_url())
+
+    @override_settings(BRANDFETCH_CLIENT_ID="")
+    def test_003_no_client_id_means_no_logo(self):
+        card = self.make_card(store_domain='target.com')
+        self.assertIsNone(card.logo_url())
+
+    def test_004_the_cards_list_includes_the_logo_url(self):
+        self.make_card(store_domain='target.com')
+        response = self.client.get(reverse('all_cards'))
+        response_body = json.loads(response.content)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response_body[0]['logo_url'].startswith('https://cdn.brandfetch.io/target.com'))
