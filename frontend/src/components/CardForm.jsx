@@ -1,13 +1,19 @@
 // src/components/CardForm.jsx
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link as RouterLink } from "react-router-dom"
 import Alert from "@mui/material/Alert"
 import Button from "@mui/material/Button"
 import InputAdornment from "@mui/material/InputAdornment"
+import List from "@mui/material/List"
+import ListItemAvatar from "@mui/material/ListItemAvatar"
+import ListItemButton from "@mui/material/ListItemButton"
+import ListItemText from "@mui/material/ListItemText"
 import Paper from "@mui/material/Paper"
 import Stack from "@mui/material/Stack"
 import TextField from "@mui/material/TextField"
 import Typography from "@mui/material/Typography"
+import { api } from "../api/client"
+import StoreAvatar from "./StoreAvatar"
 
 const EMPTY = { storeName: "", storeDomain: "", lastFour: "", balance: "", expirationDate: "", nickname: "" }
 
@@ -21,6 +27,41 @@ export default function CardForm({ title, initial = EMPTY, submitLabel, cancelTo
   const [nickname, setNickname] = useState(initial.nickname)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
+  // true only once the user has typed in the Store field (not when Edit loads a saved name)
+  const [typed, setTyped] = useState(false)
+
+  // after a short pause in typing, ask our backend for matching brands
+  useEffect(() => {
+    if (!typed || storeDomain || storeName.trim().length < 2) return
+
+    let cancelled = false
+    const timer = setTimeout(() => {
+      api.get(`/api/v1/cards/brand-search/?name=${encodeURIComponent(storeName.trim())}`)
+        .then((data) => {
+          if (!cancelled) setSuggestions(data.results)
+        })
+        .catch(() => {
+          // no suggestions is fine, the store name still works as free text
+          if (!cancelled) setSuggestions([])
+        })
+    }, 350)
+
+    // runs before the next effect: drop the old timer and ignore the old response
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [typed, storeName, storeDomain])
+
+  function pickBrand(brand) {
+    setStoreName(brand.name ?? brand.domain)
+    setStoreDomain(brand.domain)
+    setSuggestions([])
+  }
+
+  const showSuggestions =
+    typed && !storeDomain && storeName.trim().length >= 2 && suggestions.length > 0
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -49,15 +90,54 @@ export default function CardForm({ title, initial = EMPTY, submitLabel, cancelTo
 
       <form onSubmit={handleSubmit}>
         <Stack spacing={3}>
-          <TextField
-            label="Store"
-            required
-            autoFocus
-            value={storeName}
-            onChange={(e) => setStoreName(e.target.value)}
-            error={Boolean(errors.store_name)}
-            helperText={errors.store_name?.[0]}
-          />
+          <Stack sx={{ position: "relative" }}>
+            <TextField
+              label="Store"
+              required
+              autoFocus
+              value={storeName}
+              onChange={(e) => {
+                setStoreName(e.target.value)
+                setStoreDomain("") // typing again clears the chosen brand
+                setTyped(true)
+              }}
+              error={Boolean(errors.store_name)}
+              helperText={errors.store_name?.[0]}
+              onBlur={() => setSuggestions([])}
+            />
+
+            {showSuggestions && (
+              <Paper
+                elevation={8}
+                onMouseDown={(e) => e.preventDefault()}
+                sx={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10, mt: 0.5 }}
+              >
+                <List dense disablePadding>
+                  {suggestions.map((brand) => (
+                    <ListItemButton key={brand.domain} onClick={() => pickBrand(brand)}>
+                      <ListItemAvatar>
+                        <StoreAvatar
+                          card={{ store_name: brand.name ?? brand.domain, logo_url: brand.icon }}
+                          size={32}
+                        />
+                      </ListItemAvatar>
+                      <ListItemText primary={brand.name ?? brand.domain} secondary={brand.domain} />
+                    </ListItemButton>
+                  ))}
+                  <ListItemButton onClick={() => setSuggestions([])}>
+                    <ListItemText primary={`Use "${storeName.trim()}" without a logo`} />
+                  </ListItemButton>
+                </List>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", px: 2, py: 1, borderTop: "1px solid #EADFCF" }}
+                >
+                  {"Not here? Keep typing your store's name. We will use a letter instead of a logo."}
+                </Typography>
+              </Paper>
+            )}
+          </Stack>
 
           <TextField
             label="Last 4 digits"
