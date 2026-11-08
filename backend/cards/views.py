@@ -1,6 +1,8 @@
 # cards/views.py
 import datetime
 
+from urllib.parse import quote
+
 import requests
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -204,3 +206,41 @@ class SendReminders(APIView):
             card.reminder_sent = True
             card.save()
         return Response({"sent": len(expiring), "message": f"Emailed a reminder for {len(expiring)} card(s)."})
+
+
+class BrandSearch(APIView):
+
+    def get(self, request):
+        name = request.query_params.get("name", "").strip()
+        # too short to search for
+        if len(name) < 2:
+            return Response({"results": []})
+        if not settings.BRANDFETCH_CLIENT_ID:
+            return Response({"error": "Logo search is not set up on the server."},
+                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        try:
+            # our server calls Brandfetch's server, the same pattern as the PokeAPI lesson
+            response = requests.get(
+                "https://api.brandfetch.io/v2/search/" + quote(name, safe=""),
+                params={"c": settings.BRANDFETCH_CLIENT_ID},
+                timeout=10,
+            )
+        except requests.RequestException:
+            return Response({"error": "Could not reach the logo service."},
+                            status=status.HTTP_502_BAD_GATEWAY)
+
+        if response.status_code != 200:
+            return Response({"error": "The logo service could not search right now."},
+                            status=status.HTTP_502_BAD_GATEWAY)
+
+        # keep just the first five matches, and only the parts the app needs
+        results = []
+        for brand in response.json()[:5]:
+            if brand.get("domain"):
+                results.append({
+                    "name": brand.get("name"),
+                    "domain": brand.get("domain"),
+                    "icon": brand.get("icon"),
+                })
+        return Response({"results": results})

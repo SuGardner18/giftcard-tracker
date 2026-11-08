@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.core import validators as v
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import models
 from .validators import validate_last_four
 
@@ -24,6 +25,12 @@ class GiftCard(models.Model):
 
     def current_balance(self):
         return self.starting_balance - self.total_spent()
+
+    # the address of this store's logo on Brandfetch, or None when there is nothing to show
+    def logo_url(self):
+        if not self.store_domain or not settings.BRANDFETCH_CLIENT_ID:
+            return None
+        return f"https://cdn.brandfetch.io/{self.store_domain}/w/128/h/128/icon.png?c={settings.BRANDFETCH_CLIENT_ID}"
 
     def clean(self):
         # starting balance can't be edited below what was already spent

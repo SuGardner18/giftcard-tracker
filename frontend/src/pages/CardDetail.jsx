@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react"
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom"
 import Alert from "@mui/material/Alert"
-import Avatar from "@mui/material/Avatar"
 import Button from "@mui/material/Button"
 import CircularProgress from "@mui/material/CircularProgress"
 import Dialog from "@mui/material/Dialog"
@@ -26,6 +25,7 @@ import EditIcon from "@mui/icons-material/Edit"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
 import StatusChip from "../components/StatusChip"
+import StoreAvatar from "../components/StoreAvatar"
 import { cardStatus, formatDate, formatMoney } from "../utilities/cards"
 
 // a small label with a value under it
@@ -139,9 +139,7 @@ export default function CardDetail() {
           sx={{ mb: 3 }}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ width: 56, height: 56, bgcolor: "#D8F3EE", color: "primary.main", fontWeight: 700 }}>
-              {card.store_name.charAt(0).toUpperCase()}
-            </Avatar>
+            <StoreAvatar card={card} size={56} />
             <div>
               <Typography variant="h4" component="h1">
                 {card.store_name}

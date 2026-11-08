@@ -152,3 +152,6 @@ CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173"
 # Resend: sends the expiry reminder emails
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 RESEND_FROM = os.getenv("RESEND_FROM", "GFiles <onboarding@resend.dev>")
+
+# Brandfetch: finds a store's logo
+BRANDFETCH_CLIENT_ID = os.getenv("BRANDFETCH_CLIENT_ID", "")
