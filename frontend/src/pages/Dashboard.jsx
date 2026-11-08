@@ -11,6 +11,7 @@ import AddIcon from "@mui/icons-material/Add"
 import EmailIcon from "@mui/icons-material/Email"
 import { api } from "../api/client"
 import { useAuth } from "../contexts/AuthContext"
+import GiftCardList from "../components/GiftCardList"
 import GiftCardTile from "../components/GiftCardTile"
 import DashboardToolbar from "../components/DashboardToolbar"
 import { countByFilter, filterAndSortCards, formatMoney } from "../utilities/cards"
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
   const [sort, setSort] = useState("expiring")
+  const [view, setView] = useState("grid")
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -114,6 +116,8 @@ export default function Dashboard() {
             onFilterChange={setFilter}
             sort={sort}
             onSortChange={setSort}
+            view={view}
+            onViewChange={setView}
             counts={counts}
           />
 
@@ -121,13 +125,17 @@ export default function Dashboard() {
             <Typography color="text.secondary">No cards match your search.</Typography>
           )}
 
-          <Grid container spacing={3}>
-            {visibleCards.map((card) => (
-              <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                <GiftCardTile card={card} />
-              </Grid>
-            ))}
-          </Grid>
+          {view === "grid" && (
+            <Grid container spacing={3}>
+              {visibleCards.map((card) => (
+                <Grid key={card.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                  <GiftCardTile card={card} />
+                </Grid>
+              ))}
+            </Grid>
+          )}
+
+          {view === "list" && visibleCards.length > 0 && <GiftCardList cards={visibleCards} />}
         </>
       )}
     </>

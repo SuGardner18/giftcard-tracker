@@ -1,15 +1,23 @@
 // src/components/DashboardToolbar.jsx
 import Chip from "@mui/material/Chip"
+import IconButton from "@mui/material/IconButton"
 import InputAdornment from "@mui/material/InputAdornment"
 import MenuItem from "@mui/material/MenuItem"
 import Stack from "@mui/material/Stack"
 import TextField from "@mui/material/TextField"
 import SearchIcon from "@mui/icons-material/Search"
+import ViewListIcon from "@mui/icons-material/ViewList"
+import ViewModuleIcon from "@mui/icons-material/ViewModule"
 
 const FILTERS = [
   { value: "all", label: "All" },
   { value: "soon", label: "Expiring soon" },
   { value: "inactive", label: "Used up or expired" },
+]
+
+const VIEWS = [
+  { value: "grid", label: "Grid view", icon: <ViewModuleIcon /> },
+  { value: "list", label: "List view", icon: <ViewListIcon /> },
 ]
 
 export default function DashboardToolbar({
@@ -19,6 +27,8 @@ export default function DashboardToolbar({
   onFilterChange,
   sort,
   onSortChange,
+  view,
+  onViewChange,
   counts,
 }) {
   return (
@@ -68,6 +78,28 @@ export default function DashboardToolbar({
         <MenuItem value="balance">Highest balance</MenuItem>
         <MenuItem value="name">Store name</MenuItem>
       </TextField>
+
+      <Stack direction="row" spacing={0.5}>
+        {VIEWS.map((item) => {
+          const selected = view === item.value
+          return (
+            <IconButton
+              key={item.value}
+              aria-label={item.label}
+              aria-pressed={selected}
+              onClick={() => onViewChange(item.value)}
+              sx={{
+                width: 44,
+                height: 44,
+                bgcolor: selected ? "#D8F3EE" : "transparent",
+                color: selected ? "primary.main" : "text.secondary",
+              }}
+            >
+              {item.icon}
+            </IconButton>
+          )
+        })}
+      </Stack>
     </Stack>
   )
 }
