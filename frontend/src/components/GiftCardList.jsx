@@ -17,20 +17,23 @@ import { cardStatus, formatDate, formatMoney } from "../utilities/cards"
 // the look of the column titles in the header row
 const HEADER_CELL = { fontSize: 12, fontWeight: 500, letterSpacing: 0.4, textTransform: "uppercase", color: "text.secondary" }
 
+// below the md breakpoint (900px) these two columns are hidden, and their details show under the store name instead
+const HIDE_ON_SMALL = { display: { xs: "none", md: "table-cell" } }
+
 // the same cards as the tiles, as a compact table with one row per card
 export default function GiftCardList({ cards }) {
   const navigate = useNavigate()
 
   return (
     <TableContainer component={Paper} elevation={1}>
-      <Table aria-label="Gift cards">
+      <Table aria-label="Gift cards" sx={{ "& .MuiTableCell-root": { px: { xs: 1.5, md: 2 } } }}>
         <TableHead>
           <TableRow>
             <TableCell sx={HEADER_CELL}>Store</TableCell>
             <TableCell sx={HEADER_CELL}>Balance</TableCell>
-            <TableCell sx={HEADER_CELL}>Expires</TableCell>
-            <TableCell sx={HEADER_CELL}>Status</TableCell>
-            <TableCell />
+            <TableCell sx={{ ...HEADER_CELL, ...HIDE_ON_SMALL }}>Expires</TableCell>
+            <TableCell sx={{ ...HEADER_CELL, ...HIDE_ON_SMALL }}>Status</TableCell>
+            <TableCell sx={HIDE_ON_SMALL} />
           </TableRow>
         </TableHead>
         <TableBody>
@@ -64,6 +67,19 @@ export default function GiftCardList({ cards }) {
                       <Typography variant="body2" color="text.secondary">
                         {details}
                       </Typography>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        flexWrap="wrap"
+                        useFlexGap
+                        sx={{ display: { xs: "flex", md: "none" }, mt: 0.5 }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {card.expiration_date ? `Expires ${formatDate(card.expiration_date)}` : "No expiration"}
+                        </Typography>
+                        <StatusChip status={status} />
+                      </Stack>
                     </div>
                   </Stack>
                 </TableCell>
@@ -72,15 +88,15 @@ export default function GiftCardList({ cards }) {
                     {formatMoney(card.current_balance)}
                   </Typography>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={HIDE_ON_SMALL}>
                   <Typography variant="body2" color="text.secondary">
                     {card.expiration_date ? `Expires ${formatDate(card.expiration_date)}` : "No expiration"}
                   </Typography>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={HIDE_ON_SMALL}>
                   <StatusChip status={status} />
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={HIDE_ON_SMALL}>
                   <ChevronRightIcon color="action" />
                 </TableCell>
               </TableRow>
