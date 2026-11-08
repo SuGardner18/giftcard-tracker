@@ -62,6 +62,7 @@ export default function EditCard() {
       onSubmit={handleSave}
       initial={{
         storeName: card.store_name,
+        storeDomain: card.store_domain ?? "",
         lastFour: card.card_last_four,
         balance: card.starting_balance,
         expirationDate: card.expiration_date ?? "",

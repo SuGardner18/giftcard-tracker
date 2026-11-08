@@ -9,11 +9,12 @@ import Stack from "@mui/material/Stack"
 import TextField from "@mui/material/TextField"
 import Typography from "@mui/material/Typography"
 
-const EMPTY = { storeName: "", lastFour: "", balance: "", expirationDate: "", nickname: "" }
+const EMPTY = { storeName: "", storeDomain: "", lastFour: "", balance: "", expirationDate: "", nickname: "" }
 
 
 export default function CardForm({ title, initial = EMPTY, submitLabel, cancelTo, onSubmit }) {
   const [storeName, setStoreName] = useState(initial.storeName)
+  const [storeDomain, setStoreDomain] = useState(initial.storeDomain)
   const [lastFour, setLastFour] = useState(initial.lastFour)
   const [balance, setBalance] = useState(initial.balance)
   const [expirationDate, setExpirationDate] = useState(initial.expirationDate)
@@ -28,6 +29,7 @@ export default function CardForm({ title, initial = EMPTY, submitLabel, cancelTo
     try {
       await onSubmit({
         store_name: storeName,
+        store_domain: storeDomain || null,
         card_last_four: lastFour,
         starting_balance: balance,
         expiration_date: expirationDate || null,
