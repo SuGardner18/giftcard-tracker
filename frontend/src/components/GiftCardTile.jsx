@@ -18,9 +18,9 @@ export default function GiftCardTile({ card }) {
 
   return (
     <Card elevation={1} sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 2.5, p: 3 }}>
+      <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", gap: 1.5, p: 2 }}>
         <Stack direction="row" spacing={2} alignItems="center">
-          <StoreAvatar card={card} />
+          <StoreAvatar card={card} size={40} />
           <div>
             <Typography variant="h6" component="h2">
               {card.store_name}
@@ -32,14 +32,14 @@ export default function GiftCardTile({ card }) {
         </Stack>
 
         <div>
-          <Typography variant="overline" color="text.secondary">
+          <Typography variant="overline" color="text.secondary" sx={{ display: "block", lineHeight: 1.5 }}>
             Balance
           </Typography>
           <Typography
             variant="h4"
             component="p"
             color={dimmed ? "text.secondary" : "text.primary"}
-            sx={{ fontFamily: "inherit", fontWeight: 400, fontSize: 36 }}
+            sx={{ fontFamily: "inherit", fontWeight: 400, fontSize: 28 }}
           >
             {formatMoney(card.current_balance)}
           </Typography>
@@ -53,8 +53,8 @@ export default function GiftCardTile({ card }) {
         </Stack>
       </CardContent>
 
-      <CardActions sx={{ px: 2, pb: 2 }}>
-        <Button component={RouterLink} to={`/cards/${card.id}`}>
+      <CardActions sx={{ px: 1, pb: 1 }}>
+        <Button component={RouterLink} to={`/cards/${card.id}`} size="small">
           View details
         </Button>
       </CardActions>
