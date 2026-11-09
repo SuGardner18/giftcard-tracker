@@ -5,11 +5,12 @@ GFiles keeps track of your gift cards in one place: the balance left on each car
 Built as a full-stack capstone project for Code Platoon.
 
 
-![The Dashboard in grid view](docs/screenshots/dashboard-grid.png)
+<img src="docs/screenshots/dashboard-grid.png" alt="The Dashboard in grid view" width="680">
 
-![The Dashboard in list view](docs/screenshots/dashboard-list.png)
-
-![Adding a card with the store logo search](docs/screenshots/add-card-search.png)
+<p>
+  <img src="docs/screenshots/dashboard-list.png" alt="The Dashboard in list view" width="340">
+  <img src="docs/screenshots/add-card-search.png" alt="Adding a card with the store logo search" width="340">
+</p>
 
 
 ## Features
@@ -34,3 +35,39 @@ Built as a full-stack capstone project for Code Platoon.
 | Containers | Docker and Docker Compose |
 | Hosting | AWS EC2, with the images pulled from Docker Hub |
 | Third-party APIs | Resend (expiry emails) and Brandfetch (store logos) |
+
+## Data model
+
+There are two models of mine, plus Django's built-in `User`. A user owns many gift cards, and a gift card has many transactions (shown in the app as purchases), and deleting a parent deletes its children. The balance is never stored: it is the starting balance minus the purchases.
+
+```mermaid
+erDiagram
+    USER ||--o{ GIFTCARD : owns
+    GIFTCARD ||--o{ TRANSACTION : has
+    USER {
+        int id PK
+        string username
+        string email
+    }
+    GIFTCARD {
+        int id PK
+        int user_id FK
+        string store_name
+        string store_domain
+        string card_last_four
+        string nickname
+        decimal starting_balance
+        date expiration_date
+        boolean reminder_sent
+        datetime created_at
+    }
+    TRANSACTION {
+        int id PK
+        int gift_card_id FK
+        decimal amount
+        date date
+        string note
+        string entered_by
+        datetime created_at
+    }
+```
