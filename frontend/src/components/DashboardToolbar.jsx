@@ -34,7 +34,7 @@ export default function DashboardToolbar({
   return (
     <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap spacing={1.5} sx={{ mb: 3 }}>
       <TextField
-        placeholder="Search by store"
+        placeholder="Search by store or last 4 digits"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         sx={{ flex: "1 1 260px", minWidth: 0, bgcolor: "background.paper", borderRadius: 1 }}
@@ -46,7 +46,7 @@ export default function DashboardToolbar({
               </InputAdornment>
             ),
           },
-          htmlInput: { "aria-label": "Search by store" },
+          htmlInput: { "aria-label": "Search by store or last 4 digits" },
         }}
       />
 
