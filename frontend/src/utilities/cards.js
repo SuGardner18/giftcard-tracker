@@ -53,7 +53,8 @@ export function filterAndSortCards(cards, { search, filter, sort }) {
     if (filter === "soon" && status !== "soon") return false
     if (filter === "inactive" && status !== "used" && status !== "expired") return false
     if (term) {
-      const text = `${card.store_name} ${card.nickname ?? ""}`.toLowerCase()
+      // the search checks the store, the nickname, and the last 4 digits (typed as 1234 or ****1234)
+      const text = `${card.store_name} ${card.nickname ?? ""} ${card.card_last_four} ****${card.card_last_four}`.toLowerCase()
       if (!text.includes(term)) return false
     }
     return true
