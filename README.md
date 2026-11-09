@@ -116,7 +116,7 @@ Open `.env` and set these four. Keep the defaults from `.env.example` for the re
 
 | Setting | What to put |
 | --- | --- |
-| `DJANGO_SECRET_KEY` | Any long random string |
+| `DJANGO_SECRET_KEY` | Generate one with python3 -c "import secrets; print(secrets.token_urlsafe(50))" and paste the result|
 | `POSTGRES_PASSWORD` | A password of your choice |
 | `RESEND_API_KEY` | Your Resend API key, from the [Resend dashboard](https://resend.com/docs/create-an-api-key) |
 | `BRANDFETCH_CLIENT_ID` | Your Brandfetch client ID, from the [Developer Portal](https://developers.brandfetch.com). It is public by design |
