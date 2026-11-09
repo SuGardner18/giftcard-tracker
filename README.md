@@ -5,11 +5,11 @@ GFiles keeps track of your gift cards in one place: the balance left on each car
 Built as a full-stack capstone project for Code Platoon.
 
 
-<img src="docs/screenshots/dashboard-grid.png" alt="The Dashboard in grid view" width="680">
+<img src="docs/screenshots/dashboard-grid.png" alt="The Dashboard in grid view" width="800">
 
 <p>
-  <img src="docs/screenshots/dashboard-list.png" alt="The Dashboard in list view" width="340">
-  <img src="docs/screenshots/add-card-search.png" alt="Adding a card with the store logo search" width="340">
+  <img src="docs/screenshots/dashboard-list.png" alt="The Dashboard in list view" width="400">
+  <img src="docs/screenshots/add-card-search.png" alt="Adding a card with the store logo search" width="400">
 </p>
 
 
@@ -71,3 +71,37 @@ erDiagram
         datetime created_at
     }
 ```
+
+
+## Getting started
+
+### Prerequisites
+
+| Tool | Needed for | Version I used |
+| --- | --- | --- |
+| Git | Cloning the repo | Any recent version |
+| Docker with Docker Compose v2 | The PostgreSQL database (the `docker compose` command) | Docker 29 |
+| Python 3 and pip | The Django backend | Python 3.12 |
+| Node.js and npm | The React frontend | Node 22 or newer |
+
+You also need two free accounts for the third-party APIs:
+
+- **[Resend](https://resend.com)**, for an API key. [Here is how to create one](https://resend.com/docs/create-an-api-key). A key with sending access is enough. Without it, the reminder button does not work.
+- **[Brandfetch](https://developers.brandfetch.com/register)**, for a client ID. After you sign up, you find it in the [Developer Portal](https://developers.brandfetch.com). The [Brand Search API](https://docs.brandfetch.com/brand-search-api/overview) is free. Without it, there are no store logos, and cards show their first letter.
+
+
+I developed on macOS.
+
+<details>
+<summary><strong>API</strong></summary>
+
+Every address starts with `/api/v1/`. Everything except signup and login needs the header `Authorization: Token <your token>`, and cards and purchases are private to their owner.
+
+| Resource | Create | Read | Update | Delete |
+| --- | --- | --- | --- | --- |
+| Gift cards | `POST /cards/` | `GET /cards/` and `GET /cards/<id>/` | `PUT /cards/<id>/` | `DELETE /cards/<id>/` |
+| Purchases | `POST /cards/<id>/transactions/` | Part of the card's detail | `PUT /cards/<id>/transactions/<id>/` | `DELETE /cards/<id>/transactions/<id>/` |
+
+Also: signup and login (`POST /accounts/signup` and `POST /accounts/get-token`), the reminder email (`POST /cards/reminders/`), and the store search (`GET /cards/brand-search/?name=`).
+
+</details>
