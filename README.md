@@ -160,7 +160,7 @@ Open http://localhost:5173 and sign up.
 
 ### Run the tests
 
-With the database container running, from the `backend` folder:
+With the database container running and your virtual environment active (`source venv/bin/activate`), from the `backend` folder:
 
 ```
 python manage.py test
@@ -168,8 +168,7 @@ python manage.py test
 
 There are 65 tests. The tests for Resend and Brandfetch use `@patch`, so they never call the real services.
 
-To stop the database, run `docker compose down` from the repo root. 
-
+To stop the database, run `docker compose down` from the repo root. Your data stays in a Docker volume, so don't add `-v`.
 
 
 <details>
@@ -204,5 +203,6 @@ These are the things I would build next. The reminder button on the Dashboard is
 - **Design first, then small changes.** I designed the screens in a Material UI mockup before building them, then built them as short feature branches, one change each, merged through pull requests with merge commits, so the history tells the story of the build.
 - **Tests** 65 backend tests cover the models, their validators, and the API. The calls to Resend and Brandfetch are mocked with `@patch`, so the tests never depend on an outside service.
 - **Failures degrade gracefully.** If Brandfetch is down or has no logo, the form shows no suggestions, the store name saves as plain text, and the card shows its first letter.
+- **AI Usage.** I used Claude as a coding assistant to organize my work and write code more efficiently.
 
 </details>
